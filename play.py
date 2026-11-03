@@ -7,12 +7,22 @@ import numpy as np
 import tensorflow as tf
 
 IMG_SIZE = 224
-model = tf.keras.models.load_model("gesture_model.keras")
 class_names = json.load(open("class_names.json"))
+
+# Carrega o modelo convertido para TFLite (MUITO mais leve)
+interpreter = tf.lite.Interpreter(model_path="gesture_model.tflite")
+interpreter.allocate_tensors()
+input_details = interpreter.get_input_details()
+output_details = interpreter.get_output_details()
 
 def predict(roi):
     img = cv2.cvtColor(cv2.resize(roi, (IMG_SIZE, IMG_SIZE)), cv2.COLOR_BGR2RGB)
-    probs = model.predict(img[None].astype("float32"), verbose=0)[0]
+    
+    # Roda a imagem pelo TFLite em vez de usar o modelo Keras completo
+    interpreter.set_tensor(input_details[0]['index'], img[None].astype("float32"))
+    interpreter.invoke()
+    probs = interpreter.get_tensor(output_details[0]['index'])[0]
+    
     return class_names[int(np.argmax(probs))], float(np.max(probs)), probs
 
 cap = cv2.VideoCapture(0)
@@ -20,6 +30,12 @@ if not cap.isOpened():
     raise SystemExit("Nao consegui abrir a webcam.")
     
 recent = deque(maxlen=7)          
+
+# Variáveis para guardar o último resultado (para quando pulamos frames)
+stable = "Aguardando..."
+conf = 0.0
+probs = np.zeros(len(class_names))
+frame_count = 0
 
 while True:
     ok, frame = cap.read()
@@ -31,9 +47,12 @@ while True:
     x1, y1 = w // 2 - side // 2, h // 2 - side // 2
     roi = frame[y1:y1 + side, x1:x1 + side]
     
-    label, conf, probs = predict(roi)
-    recent.append(label)
-    stable = Counter(recent).most_common(1)[0][0]
+            # Agora que usamos TFLite que é muito leve, podemos analisar a cada 3 frames de novo
+    if frame_count % 3 == 0:
+        label, conf, probs = predict(roi)
+        recent.append(label)
+        stable = Counter(recent).most_common(1)[0][0]
+    frame_count += 1
 
     cv2.rectangle(frame, (x1, y1), (x1 + side, y1 + side), (0, 255, 0), 3)
     cv2.putText(frame, f"Sinal: {stable} ({conf:.0%})", (10, 30),
