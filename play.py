@@ -54,14 +54,19 @@ while True:
         stable = Counter(recent).most_common(1)[0][0]
     frame_count += 1
 
-    cv2.rectangle(frame, (x1, y1), (x1 + side, y1 + side), (0, 255, 0), 3)
+            # Retângulo de foco em Preto
+    cv2.rectangle(frame, (x1, y1), (x1 + side, y1 + side), (0, 0, 0), 3)
+    
+    # Texto de "Sinal:" em Preto
     cv2.putText(frame, f"Sinal: {stable} ({conf:.0%})", (10, 30),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 0), 2)
+                cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 0), 2)
                 
     for i, c in enumerate(class_names):
         bw = int(probs[i] * 150)
-        cv2.rectangle(frame, (10, 50 + i * 22), (10 + bw, 64 + i * 22), (0, 200, 255), -1)
-        cv2.putText(frame, c, (170, 63 + i * 22), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+        # Barra da porcentagem em Preto
+        cv2.rectangle(frame, (10, 50 + i * 22), (10 + bw, 64 + i * 22), (0, 0, 0), -1)
+        # Letras da classe em Preto
+        cv2.putText(frame, c, (170, 63 + i * 22), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 2)
         
     cv2.imshow("Reconhecimento de Libras com CNN", frame)
     key = cv2.waitKey(1) & 0xFF
